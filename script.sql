@@ -118,23 +118,54 @@ BEGIN
 END;
 $$
 
-CREATE OR REPLACE FUNCTION fn_subscribers ()
-RETURNS refcursor
-AS $$
-DECLARE
-    meu_cursor REFCURSOR;
-BEGIN
-    OPEN meu_cursor FOR SELECT youtuber, subscribers FROM tb_top_youtubers WHERE rank <= 5;
-    RETURN meu_cursor;
+-- CREATE OR REPLACE FUNCTION fn_subscribers ()
+-- RETURNS refcursor
+-- AS $$
+-- DECLARE
+--     meu_cursor REFCURSOR;
+-- BEGIN
+--     OPEN meu_cursor FOR SELECT youtuber, subscribers FROM tb_top_youtubers WHERE rank <= 5;
+--     RETURN meu_cursor;
 
-END;
-$$
-LANGUAGE plpgsql;
+-- END;
+-- $$
+-- LANGUAGE plpgsql;
     
+-- DO $$
+-- BEGIN
+--     PERFORM fn_subscribers();
+    
+-- END;
+-- $$
+
+SELECT * FROM tb_top_youtubers;
+
 DO $$
+DECLARE
+    cur_delete REFCURSOR;
+    tupla RECORD;
 BEGIN
-    PERFORM fn_subscribers();
+    -- scroll para poder voltar ao início
+    OPEN  cur_delete SCROLL FOR
+        SELECT
+            *
+        FROM
+            tb_top_youtubers;
+    LOOP    
+        FETCH cur_delete INTO tupla;
+        EXIT WHEN NOT FOUND;
+        IF tupla.video_count IS NULL THEN
+            DELETE FROM tb_top_youtubers WHERE CURRENT OF cur_delete;
+        END IF;
+    END LOOP;
     
+    -- loop para exibir item a item, de baixo para cima
+    LOOP
+        FETCH BACKWARD FROM cur_delete INTO tupla;
+        EXIT WHEN NOT FOUND;
+        RAISE NOTICE '%', tupla;
+    END LOOP;
+    CLOSE cur_delete;
 END;
 $$
 
